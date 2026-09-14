@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Учёт продаж</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: var(--tg-theme-bg-color, #F3F1EA);
+    --surface: var(--tg-theme-secondary-bg-color, #EAE7DD);
+    --text: var(--tg-theme-text-color, #211F1A);
+    --hint: var(--tg-theme-hint-color, #8C8878);
+    --accent: var(--tg-theme-button-color, #2B4A52);
+    --accent-text: var(--tg-theme-button-text-color, #FFFFFF);
+    --ink: #C97A2B;
+    --line: rgba(33,31,26,0.12);
+    --danger: #B5453A;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    overscroll-behavior-y: contain;
+  }
+
+  body {
+    padding-bottom: 96px;
+  }
+
+  .wrap {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 20px 18px 0;
+  }
+
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+
+  header h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 21px;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+
+  .edit-toggle {
+    background: none;
+    border: none;
+    color: var(--hint);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 6px 2px;
+    cursor: pointer;
+  }
+  .edit-toggle.active { color: var(--danger); }
+
+  /* ---------- Hero tally ---------- */
+
+  .hero {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 4px 22px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 4px;
+  }
+
+  .hero-count {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 48px;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+  }
+
+  .hero-side { flex: 1; min-width: 0; }
+
+  .hero-label {
+    font-size: 13px;
+    color: var(--hint);
+    margin: 2px 0 8px;
+  }
+
+  .tally {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px 7px;
+    min-height: 14px;
+  }
+
+  .tally-group { display: flex; align-items: flex-end; gap: 2px; }
+  .tally-group svg { display: block; }
+
+  .hero-sum {
+    font-size: 13px;
+    color: var(--ink);
+    margin-top: 10px;
+    font-weight: 500;
+  }
+
+  /* ---------- Product list ---------- */
+
+  .list { margin-top: 6px; }
+
+  .empty {
+    text-align: center;
+    padding: 56px 20px;
+    color: var(--hint);
+  }
+  .empty-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 17px;
+    color: var(--text);
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  .empty-sub { font-size: 14px; line-height: 1.5; }
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 2px;
+    border-bottom: 1px solid var(--line);
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s ease;
+  }
+  .row:active { background: rgba(0,0,0,0.035); }
+  .row:last-child { border-bottom: none; }
+
+  .row-remove {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--danger);
+    color: #fff;
+    border: none;
+    font-size: 18px;
+    line-height: 1;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    cursor: pointer;
+  }
+  .editing .row-remove { display: flex; }
+  .editing .row { cursor: default; }
+  .editing .row:active { background: none; }
+
+  .row-main { flex: 1; min-width: 0; }
+  .row-name {
+    font-size: 16px;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .row-price {
+    font-size: 13px;
+    color: var(--hint);
+    margin-top: 1px;
+  }
+
+  .row-qty {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 20px;
+    min-width: 28px;
+    text-align: right;
+    flex: 0 0 auto;
+  }
+
+  .row-minus {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--hint);
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    cursor: pointer;
+  }
+  .row-minus:active { background: rgba(0,0,0,0.05); }
+
+  .row.pulse .row-qty { animation: pulse 0.28s ease; }
+  @keyframes pulse {
+    0% { transform: scale(1); color: var(--ink); }
+    50% { transform: scale(1.28); color: var(--ink); }
+    100% { transform: scale(1); }
+  }
+
+  /* ---------- Add button ---------- */
+
+  .actions {
+    position: fixed;
+    left: 0; right: 0;
+    bottom: 0;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 12px 18px calc(16px + env(safe-area-inset-bottom));
+    display: flex;
+    gap: 10px;
+    background: linear-gradient(to top, var(--bg) 60%, rgba(0,0,0,0));
+    z-index: 5;
+  }
+
+  .fab {
+    background: var(--surface);
+    color: var(--text);
+    border: none;
+    border-radius: 999px;
+    padding: 13px 20px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .fab:active { transform: scale(0.97); }
+
+  .fab-end {
+    flex: 1;
+    background: var(--accent);
+    color: var(--accent-text);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+  }
+  .fab-end:disabled {
+    opacity: 0.45;
+    box-shadow: none;
+    cursor: default;
+  }
+
+  /* ---------- Sheet ---------- */
+
+  .sheet-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 10;
+  }
+  .sheet-backdrop.open { opacity: 1; pointer-events: auto; }
+
+  .sheet {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    background: var(--bg);
+    border-radius: 18px 18px 0 0;
+    padding: 8px 20px calc(24px + env(safe-area-inset-bottom));
+    transform: translateY(100%);
+    transition: transform 0.25s ease;
+    z-index: 11;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+  .sheet.open { transform: translateY(0); }
+
+  .sheet-handle {
+    width: 36px; height: 4px;
+    background: var(--line);
+    border-radius: 2px;
+    margin: 10px auto 18px;
+  }
+
+  .sheet h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 16px;
+  }
+
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-size: 13px;
+    color: var(--hint);
+    margin-bottom: 6px;
+  }
+  .field input {
+    width: 100%;
+    background: var(--surface);
+    border: none;
+    border-radius: 10px;
+    padding: 12px 13px;
+    font-size: 16px;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+  }
+  .field input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+  .sheet-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 6px;
+  }
+  .btn {
+    flex: 1;
+    padding: 13px;
+    border-radius: 10px;
+    border: none;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  .btn-primary { background: var(--accent); color: var(--accent-text); }
+  .btn-secondary { background: var(--surface); color: var(--text); }
+
+  .report {
+    background: var(--surface);
+    border-radius: 10px;
+    padding: 13px 14px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin: 0 0 14px;
+    max-height: 42vh;
+    overflow-y: auto;
+  }
+
+  .hint-line {
+    font-size: 12px;
+    color: var(--hint);
+    margin: -6px 0 14px;
+    line-height: 1.4;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Учёт продаж</h1>
+    <button class="edit-toggle" id="editToggle">Изменить</button>
+  </header>
+
+  <div class="hero">
+    <div class="hero-count" id="heroCount">0</div>
+    <div class="hero-side">
+      <div class="hero-label">товаров продано</div>
+      <div class="tally" id="tally"></div>
+      <div class="hero-sum" id="heroSum" style="display:none;"></div>
+    </div>
+  </div>
+
+  <div class="list" id="list"></div>
+</div>
+
+<div class="actions">
+  <button class="fab" id="addBtn">
+    <span style="font-size:18px; line-height:1;">+</span> Товар
+  </button>
+  <button class="fab fab-end" id="endDayBtn">Закончить день</button>
+</div>
+
+<div class="sheet-backdrop" id="backdrop"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-handle"></div>
+  <h2>Новый товар</h2>
+  <div class="field">
+    <label for="nameInput">Название</label>
+    <input id="nameInput" type="text" placeholder="Например, кружка" maxlength="40" />
+  </div>
+  <div class="field">
+    <label for="priceInput">Цена (необязательно)</label>
+    <input id="priceInput" type="number" inputmode="decimal" placeholder="Оставь пустым, если не считаешь деньги" min="0" step="0.01" />
+  </div>
+  <div class="hint-line">Продажи считаются нажатием на товар в списке. Цену можно не указывать.</div>
+  <div class="sheet-actions">
+    <button class="btn btn-secondary" id="cancelBtn">Отмена</button>
+    <button class="btn btn-primary" id="saveBtn">Добавить</button>
+  </div>
+</div>
+
+<div class="sheet" id="endSheet">
+  <div class="sheet-handle"></div>
+  <h2 id="endTitle">Итоги дня</h2>
+  <pre class="report" id="reportPreview"></pre>
+  <div class="hint-line" id="endHint">Отчёт придёт в чат, счётчики обнулятся до завтра.</div>
+  <div class="sheet-actions">
+    <button class="btn btn-secondary" id="endCancelBtn">Отмена</button>
+    <button class="btn btn-primary" id="endConfirmBtn">Отправить в чат</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  var tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+  if (tg) { tg.ready(); tg.expand(); }
+
+  var STORAGE_KEY = 'sales_products_v1';
+  var products = [];
+  var editing = false;
+
+  // ---------- storage ----------
+
+  function loadData(cb) {
+    if (tg && tg.CloudStorage) {
+      tg.CloudStorage.getItem(STORAGE_KEY, function (err, value) {
+        if (!err && value) {
+          try { products = JSON.parse(value); } catch (e) { products = []; }
+        }
+        cb();
+      });
+    } else {
+      try {
+        var raw = localStorage.getItem(STORAGE_KEY);
+        products = raw ? JSON.parse(raw) : [];
+      } catch (e) { products = []; }
+      cb();
+    }
+  }
+
+  function saveData() {
+    var json = JSON.stringify(products);
+    if (tg && tg.CloudStorage) {
+      tg.CloudStorage.setItem(STORAGE_KEY, json, function () {});
+    } else {
+      try { localStorage.setItem(STORAGE_KEY, json); } catch (e) {}
+    }
+  }
+
+  // ---------- helpers ----------
+
+  function fmtNum(n) {
+    return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(n);
+  }
+
+  function haptic(style) {
+    if (tg && tg.HapticFeedback) {
+      if (style === 'success') tg.HapticFeedback.notificationOccurred('success');
+      else tg.HapticFeedback.impactOccurred(style || 'light');
+    }
+  }
+
+  function uid() {
+    return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  }
+
+  // ---------- tally marks (groups of 5, classic hash-mark style) ----------
+
+  function tallyGroupSVG(count) {
+    // count: 1..5 strokes in this group
+    var w = count === 5 ? 26 : count * 5;
+    var svg = '<svg width="' + w + '" height="14" viewBox="0 0 ' + w + ' 14">';
+    var strokeProps = 'stroke="var(--ink)" stroke-width="2" stroke-linecap="round"';
+    for (var i = 0; i < Math.min(count, 4); i++) {
+      var x = 2 + i * 5;
+      svg += '<line x1="' + x + '" y1="1" x2="' + x + '" y2="13" ' + strokeProps + '/>';
+    }
+    if (count === 5) {
+      svg += '<line x1="0" y1="13" x2="' + (w - 2) + '" y2="1" ' + strokeProps + '/>';
+    }
+    svg += '</svg>';
+    return svg;
+  }
+
+  function renderTally(total) {
+    var el = document.getElementById('tally');
+    var capped = Math.min(total, 60); // visual cap so it stays tidy
+    var groups = Math.floor(capped / 5);
+    var rem = capped % 5;
+    var html = '';
+    for (var g = 0; g < groups; g++) {
+      html += '<div class="tally-group">' + tallyGroupSVG(5) + '</div>';
+    }
+    if (rem > 0) {
+      html += '<div class="tally-group">' + tallyGroupSVG(rem) + '</div>';
+    }
+    if (total > 60) {
+      html += '<div class="tally-group" style="font-size:12px;color:var(--hint);align-self:center;">+ещё</div>';
+    }
+    el.innerHTML = html || '';
+  }
+
+  // ---------- render ----------
+
+  function render() {
+    var totalQty = 0, totalSum = 0, hasMoney = false;
+    products.forEach(function (p) {
+      totalQty += p.sold;
+      if (p.price != null) { hasMoney = true; totalSum += p.price * p.sold; }
+    });
+
+    document.getElementById('heroCount').textContent = fmtNum(totalQty);
+    renderTally(totalQty);
+
+    var sumEl = document.getElementById('heroSum');
+    if (hasMoney) {
+      sumEl.style.display = 'block';
+      sumEl.textContent = 'на сумму ' + fmtNum(totalSum);
+    } else {
+      sumEl.style.display = 'none';
+    }
+
+    document.getElementById('endDayBtn').disabled = totalQty === 0;
+
+    var listEl = document.getElementById('list');
+    if (products.length === 0) {
+      listEl.innerHTML =
+        '<div class="empty">' +
+          '<div class="empty-title">Пока пусто</div>' +
+          '<div class="empty-sub">Добавь первый товар кнопкой ниже —<br>и отмечай продажи нажатием на него.</div>' +
+        '</div>';
+      return;
+    }
+
+    listEl.innerHTML = products.map(function (p) {
+      var priceLine = p.price != null ? fmtNum(p.price) + ' за шт.' : 'без цены';
+      return (
+        '<div class="row" data-id="' + p.id + '">' +
+          '<button class="row-remove" data-remove="' + p.id + '">&times;</button>' +
+          '<div class="row-main">' +
+            '<div class="row-name">' + escapeHtml(p.name) + '</div>' +
+            '<div class="row-price">' + priceLine + '</div>' +
+          '</div>' +
+          (editing
+            ? '<button class="row-minus" data-minus="' + p.id + '">&minus;</button>'
+            : '') +
+          '<div class="row-qty">' + p.sold + '</div>' +
+        '</div>'
+      );
+    }).join('');
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  }
+
+  // ---------- interactions ----------
+
+  document.getElementById('list').addEventListener('click', function (e) {
+    var removeBtn = e.target.closest('[data-remove]');
+    var minusBtn = e.target.closest('[data-minus]');
+    var row = e.target.closest('.row');
+    if (!row) return;
+    var id = row.getAttribute('data-id');
+
+    if (removeBtn) {
+      products = products.filter(function (p) { return p.id !== id; });
+      saveData();
+      render();
+      haptic('medium');
+      return;
+    }
+
+    if (minusBtn) {
+      var pm = products.find(function (p) { return p.id === id; });
+      if (pm && pm.sold > 0) {
+        pm.sold -= 1;
+        saveData();
+        render();
+        haptic('light');
+      }
+      return;
+    }
+
+    if (editing) return; // in edit mode, tapping the row itself does nothing
+
+    var p = products.find(function (p) { return p.id === id; });
+    if (!p) return;
+    p.sold += 1;
+    saveData();
+    row.classList.add('pulse');
+    render();
+    haptic('success');
+  });
+
+  document.getElementById('editToggle').addEventListener('click', function () {
+    editing = !editing;
+    document.body.classList.toggle('editing', editing);
+    this.textContent = editing ? 'Готово' : 'Изменить';
+    this.classList.toggle('active', editing);
+    render();
+  });
+
+  // ---------- add sheet ----------
+
+  var sheet = document.getElementById('sheet');
+  var backdrop = document.getElementById('backdrop');
+  var nameInput = document.getElementById('nameInput');
+  var priceInput = document.getElementById('priceInput');
+
+  function openSheet() {
+    sheet.classList.add('open');
+    backdrop.classList.add('open');
+    nameInput.value = '';
+    priceInput.value = '';
+    setTimeout(function () { nameInput.focus(); }, 250);
+  }
+  function closeSheet() {
+    sheet.classList.remove('open');
+    backdrop.classList.remove('open');
+  }
+
+  document.getElementById('addBtn').addEventListener('click', openSheet);
+  document.getElementById('cancelBtn').addEventListener('click', closeSheet);
+  backdrop.addEventListener('click', function () {
+    closeSheet();
+    endSheet.classList.remove('open');
+  });
+
+  document.getElementById('saveBtn').addEventListener('click', function () {
+    var name = nameInput.value.trim();
+    if (!name) {
+      haptic('rigid');
+      nameInput.focus();
+      return;
+    }
+    var priceRaw = priceInput.value.trim();
+    var price = priceRaw === '' ? null : parseFloat(priceRaw.replace(',', '.'));
+    if (price != null && isNaN(price)) price = null;
+
+    products.push({ id: uid(), name: name, price: price, sold: 0 });
+    saveData();
+    closeSheet();
+    render();
+    haptic('success');
+  });
+
+  // ---------- end of day ----------
+
+  var endSheet = document.getElementById('endSheet');
+
+  function buildReport() {
+    var sold = products.filter(function (p) { return p.sold > 0; });
+    var totalQty = 0, totalSum = 0, hasMoney = false;
+    var lines = [];
+
+    var date = new Date().toLocaleDateString('ru-RU', {
+      day: 'numeric', month: 'long', year: 'numeric'
+    });
+
+    lines.push('Итоги дня — ' + date);
+    lines.push('');
+
+    sold.forEach(function (p) {
+      totalQty += p.sold;
+      if (p.price != null) {
+        hasMoney = true;
+        var s = p.price * p.sold;
+        totalSum += s;
+        lines.push('• ' + p.name + ' — ' + p.sold + ' шт. × ' + fmtNum(p.price) + ' = ' + fmtNum(s));
+      } else {
+        lines.push('• ' + p.name + ' — ' + p.sold + ' шт.');
+      }
+    });
+
+    lines.push('');
+    lines.push('Всего продано: ' + fmtNum(totalQty) + ' шт.');
+    if (hasMoney) {
+      lines.push('Общая сумма: ' + fmtNum(totalSum));
+    }
+
+    return { text: lines.join('\n'), totalQty: totalQty, totalSum: totalSum, empty: sold.length === 0 };
+  }
+
+  function closeEndSheet() {
+    endSheet.classList.remove('open');
+    backdrop.classList.remove('open');
+  }
+
+  function resetDay() {
+    products.forEach(function (p) { p.sold = 0; });
+    saveData();
+    render();
+  }
+
+  document.getElementById('endDayBtn').addEventListener('click', function () {
+    var report = buildReport();
+    if (report.empty) {
+      haptic('rigid');
+      return;
+    }
+    document.getElementById('reportPreview').textContent = report.text;
+
+    // sendData доступен, только если приложение открыто кнопкой клавиатуры бота
+    var canSend = !!(tg && typeof tg.sendData === 'function' && tg.initData);
+    var confirmBtn = document.getElementById('endConfirmBtn');
+    var hint = document.getElementById('endHint');
+
+    if (canSend) {
+      confirmBtn.textContent = 'Отправить в чат';
+      hint.textContent = 'Отчёт придёт в чат, счётчики обнулятся до завтра.';
+    } else {
+      confirmBtn.textContent = 'Скопировать и закрыть день';
+      hint.textContent = 'Приложение открыто вне чата, поэтому отчёт будет скопирован — вставь его в чат сам. Счётчики обнулятся.';
+    }
+
+    endSheet.classList.add('open');
+    backdrop.classList.add('open');
+    haptic('light');
+  });
+
+  document.getElementById('endCancelBtn').addEventListener('click', closeEndSheet);
+
+  document.getElementById('endConfirmBtn').addEventListener('click', function () {
+    var report = buildReport();
+
+    if (tg && typeof tg.sendData === 'function' && tg.initData) {
+      tg.sendData(JSON.stringify({
+        type: 'day_report',
+        text: report.text,
+        total_qty: report.totalQty,
+        total_sum: report.totalSum
+      }));
+      resetDay();       // Telegram закроет приложение сразу после sendData
+      closeEndSheet();
+      return;
+    }
+
+    // запасной вариант: копируем текст в буфер обмена
+    var copy = function () {
+      var ta = document.createElement('textarea');
+      ta.value = report.text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch (e) {}
+      document.body.removeChild(ta);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(report.text).catch(copy);
+    } else {
+      copy();
+    }
+
+    resetDay();
+    closeEndSheet();
+    haptic('success');
+    if (tg && tg.showAlert) tg.showAlert('Отчёт скопирован. День закрыт.');
+  });
+
+  // ---------- theme sync ----------
+
+  function applyTheme() {
+    if (!tg) return;
+    document.body.style.backgroundColor = tg.themeParams.bg_color || '';
+  }
+  if (tg) {
+    tg.onEvent('themeChanged', applyTheme);
+    applyTheme();
+  }
+
+  // ---------- init ----------
+
+  loadData(render);
+})();
+</script>
+</body>
+</html>
