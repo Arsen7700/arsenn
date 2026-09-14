@@ -215,7 +215,7 @@
   .actions {
     position: fixed;
     left: 0; right: 0;
-    bottom: 0;
+    bottom: 58px;
     max-width: 480px;
     margin: 0 auto;
     padding: 12px 18px calc(16px + env(safe-area-inset-bottom));
@@ -357,27 +357,126 @@
   @media (prefers-reduced-motion: reduce) {
     * { animation: none !important; transition: none !important; }
   }
+
+  /* ---------- Personal sections / bottom navigation ---------- */
+  .section { display:none; padding-top: 6px; }
+  .section.active { display:block; }
+  .nav {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    max-width: 480px; margin: 0 auto;
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+    background: color-mix(in srgb, var(--bg) 94%, transparent);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-top: 1px solid var(--line);
+    display:grid; grid-template-columns: repeat(4,1fr); gap:4px;
+    z-index: 20;
+  }
+  .nav-btn {
+    border:0; background:transparent; color:var(--hint);
+    border-radius:12px; padding:8px 4px 7px;
+    font: 500 11px Inter, sans-serif; cursor:pointer;
+  }
+  .nav-btn .ico { display:block; font-size:20px; line-height:20px; margin-bottom:3px; }
+  .nav-btn.active { color:var(--accent); background:var(--surface); }
+  body { padding-bottom: 86px; }
+  .card {
+    background:var(--surface); border-radius:14px; padding:15px;
+    margin:10px 0; border:1px solid var(--line);
+  }
+  .card-title { font:600 17px 'Space Grotesk',sans-serif; margin-bottom:10px; }
+  .info-row { display:flex; justify-content:space-between; gap:12px; padding:9px 0; border-bottom:1px solid var(--line); }
+  .info-row:last-child { border-bottom:0; }
+  .info-label { color:var(--hint); font-size:13px; }
+  .info-value { font-size:14px; font-weight:500; text-align:right; overflow-wrap:anywhere; }
+  .action-btn {
+    width:100%; border:0; border-radius:11px; padding:12px;
+    margin-top:8px; background:var(--accent); color:var(--accent-text);
+    font:600 14px Inter,sans-serif;
+  }
+  .secondary-action { background:var(--bg); color:var(--text); border:1px solid var(--line); }
+  .stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .stat { background:var(--bg); border-radius:12px; padding:13px; }
+  .stat-num { font:700 24px 'Space Grotesk',sans-serif; }
+  .stat-label { color:var(--hint); font-size:12px; margin-top:3px; }
+
 </style>
 </head>
 <body>
 
 <div class="wrap">
-  <header>
-    <h1>Учёт продаж</h1>
-    <button class="edit-toggle" id="editToggle">Изменить</button>
-  </header>
-
-  <div class="hero">
-    <div class="hero-count" id="heroCount">0</div>
-    <div class="hero-side">
-      <div class="hero-label">товаров продано</div>
-      <div class="tally" id="tally"></div>
-      <div class="hero-sum" id="heroSum" style="display:none;"></div>
+  <section class="section active" id="salesSection">
+    <header>
+      <h1>Учёт продаж</h1>
+      <button class="edit-toggle" id="editToggle">Изменить</button>
+    </header>
+    <div class="hero">
+      <div class="hero-count" id="heroCount">0</div>
+      <div class="hero-side">
+        <div class="hero-label">товаров продано</div>
+        <div class="tally" id="tally"></div>
+        <div class="hero-sum" id="heroSum" style="display:none;"></div>
+      </div>
     </div>
-  </div>
+    <div class="list" id="list"></div>
+  </section>
 
-  <div class="list" id="list"></div>
+  <section class="section" id="phoneSection">
+    <header><h1>Телефон</h1></header>
+    <div class="card">
+      <div class="card-title">Мой телефон</div>
+      <div class="info-row"><span class="info-label">Номер</span><span class="info-value" id="phoneNumber">Не указан</span></div>
+      <button class="action-btn" id="requestPhoneBtn">Поделиться номером</button>
+      <div class="hint-line" style="margin-top:10px;margin-bottom:0;">Telegram не даёт Mini App получить номер автоматически. Номер можно передать боту через кнопку запроса контакта.</div>
+    </div>
+  </section>
+
+  <section class="section" id="deviceSection">
+    <header><h1>Устройство</h1></header>
+    <div class="card">
+      <div class="card-title">Информация об устройстве</div>
+      <div class="info-row"><span class="info-label">Платформа</span><span class="info-value" id="devicePlatform">—</span></div>
+      <div class="info-row"><span class="info-label">ОС / браузер</span><span class="info-value" id="deviceBrowser">—</span></div>
+      <div class="info-row"><span class="info-label">Экран</span><span class="info-value" id="deviceScreen">—</span></div>
+      <div class="info-row"><span class="info-label">Telegram WebApp</span><span class="info-value" id="tgVersion">—</span></div>
+    </div>
+  </section>
+
+  <section class="section" id="simSection">
+    <header><h1>SIM</h1></header>
+    <div class="card">
+      <div class="card-title">Моя SIM-карта</div>
+      <div class="info-row"><span class="info-label">Оператор</span><span class="info-value">Не определён</span></div>
+      <div class="info-row"><span class="info-label">Номер SIM</span><span class="info-value">Скрыт / недоступен</span></div>
+      <div class="hint-line" style="margin-top:10px;margin-bottom:0;">В обычном Telegram Mini App браузер не имеет доступа к IMSI, ICCID и оператору SIM. Эти данные можно хранить только если пользователь сам их введёт или передаст через отдельный бот/сервис.</div>
+    </div>
+  </section>
+
+  <section class="section" id="aboutSection">
+    <header><h1>Моё</h1></header>
+    <div class="card">
+      <div class="card-title">Мой профиль</div>
+      <div class="info-row"><span class="info-label">Имя</span><span class="info-value" id="myName">—</span></div>
+      <div class="info-row"><span class="info-label">Username</span><span class="info-value" id="myUsername">—</span></div>
+      <div class="info-row"><span class="info-label">Telegram ID</span><span class="info-value" id="myId">—</span></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Статистика</div>
+      <div class="stat-grid">
+        <div class="stat"><div class="stat-num" id="mySales">0</div><div class="stat-label">продано сегодня</div></div>
+        <div class="stat"><div class="stat-num" id="myRevenue">0</div><div class="stat-label">выручка сегодня</div></div>
+      </div>
+    </div>
+  </section>
 </div>
+
+<nav class="nav" id="bottomNav">
+  <button class="nav-btn active" data-section="salesSection"><span class="ico">💰</span>Продажи</button>
+  <button class="nav-btn" data-section="phoneSection"><span class="ico">📱</span>Телефон</button>
+  <button class="nav-btn" data-section="deviceSection"><span class="ico">⚙️</span>Устройство</button>
+  <button class="nav-btn" data-section="simSection"><span class="ico">💳</span>SIM</button>
+  <button class="nav-btn" data-section="aboutSection"><span class="ico">👤</span>Моё</button>
+</nav>
 
 <div class="actions">
   <button class="fab" id="addBtn">
@@ -554,6 +653,9 @@
         '</div>'
       );
     }).join('');
+  }
+
+    if (document.getElementById('mySales')) fillPersonalInfo();
   }
 
   function escapeHtml(s) {
@@ -767,6 +869,67 @@
     if (tg && tg.showAlert) tg.showAlert('Отчёт скопирован. День закрыт.');
   });
 
+
+  // ---------- personal sections ----------
+  document.getElementById('bottomNav').addEventListener('click', function(e) {
+    var btn = e.target.closest('.nav-btn');
+    if (!btn) return;
+    var sectionId = btn.getAttribute('data-section');
+    document.querySelectorAll('.section').forEach(function(s) {
+      s.classList.toggle('active', s.id === sectionId);
+    });
+    document.querySelectorAll('.nav-btn').forEach(function(b) {
+      b.classList.toggle('active', b === btn);
+    });
+    if (sectionId !== 'salesSection') {
+      document.querySelector('.actions').style.display = 'none';
+    } else {
+      document.querySelector('.actions').style.display = 'flex';
+    }
+    if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+  });
+
+  function fillPersonalInfo() {
+    var u = tg && tg.initDataUnsafe ? tg.initDataUnsafe.user : null;
+    if (u) {
+      document.getElementById('myName').textContent =
+        [u.first_name, u.last_name].filter(Boolean).join(' ') || '—';
+      document.getElementById('myUsername').textContent =
+        u.username ? '@' + u.username : 'Не указан';
+      document.getElementById('myId').textContent = u.id || '—';
+    }
+
+    var ua = navigator.userAgent || '';
+    var platform = navigator.platform || '—';
+    document.getElementById('devicePlatform').textContent = platform;
+    document.getElementById('deviceBrowser').textContent =
+      ua.length > 70 ? ua.slice(0, 67) + '…' : ua;
+    document.getElementById('deviceScreen').textContent =
+      window.screen.width + ' × ' + window.screen.height;
+    document.getElementById('tgVersion').textContent =
+      tg && tg.version ? tg.version : 'Открыто не в Telegram';
+
+    var totalQty = 0, totalSum = 0;
+    products.forEach(function(p) {
+      totalQty += Number(p.sold) || 0;
+      if (p.price != null) totalSum += (Number(p.price) || 0) * (Number(p.sold) || 0);
+    });
+    document.getElementById('mySales').textContent = fmtNum(totalQty);
+    document.getElementById('myRevenue').textContent = fmtNum(totalSum);
+  }
+
+  document.getElementById('requestPhoneBtn').addEventListener('click', function() {
+    if (tg && tg.showPopup) {
+      tg.showPopup({
+        title: 'Телефон',
+        message: 'Для получения номера добавьте в боте кнопку «Поделиться контактом». Mini App не может прочитать SIM или номер телефона напрямую.',
+        buttons: [{type:'ok', text:'Понятно'}]
+      });
+    } else {
+      alert('Номер телефона нельзя получить напрямую из Mini App.');
+    }
+  });
+
   // ---------- theme sync ----------
 
   function applyTheme() {
@@ -780,7 +943,7 @@
 
   // ---------- init ----------
 
-  loadData(render);
+  loadData(function(){ render(); fillPersonalInfo(); });
 })();
 </script>
 </body>
